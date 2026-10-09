@@ -30,7 +30,12 @@ jobs:
             LOG=$HOME/logs/obsiweb-deploy.log
             mkdir -p "$(dirname "$LOG")"; touch "$LOG"
             START=$(($(wc -l < "$LOG") + 1))
-            VERBOSE=1 FORCE=${{ github.event_name == 'workflow_dispatch' && '1' || '0' }} bash "$APP_DIR/deploy/autodeploy.sh"
+            # Deploy-Skript immer aus dem neuesten Commit nehmen (funktioniert auch, wenn es im Arbeitsverzeichnis
+            # noch fehlt oder sich mit diesem Push ändert)
+            SCRIPT=$HOME/.cache/obsiweb-autodeploy.sh
+            mkdir -p "$(dirname "$SCRIPT")"
+            git -C "$APP_DIR" fetch --quiet origin main && git -C "$APP_DIR" show origin/main:deploy/autodeploy.sh > "$SCRIPT" || { echo "✗ git fetch/show fehlgeschlagen"; exit 1; }
+            APP_DIR="$APP_DIR" VERBOSE=1 FORCE=${{ github.event_name == 'workflow_dispatch' && '1' || '0' }} bash "$SCRIPT"
             RC=$?
             tail -n +"$START" "$LOG"
             if [ "$RC" -eq 0 ]; then echo "✓ Stand: $(git -C "$APP_DIR" log --oneline -1)"; else echo "✗ Deployment fehlgeschlagen (Exit $RC)"; fi
