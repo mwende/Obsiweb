@@ -42,6 +42,14 @@ export async function davPlugin(app: FastifyInstance, opts: DavOptions) {
   app.addContentTypeParser('*', (_req, _payload, done) => done(null));
 
   app.addHook('onRequest', async (req, reply) => {
+    // Bodies werden pro Methode selbst als Stream gelesen; der Content-Type spielt keine Rolle.
+    // Fastify lehnt formal ungültige Werte (z.B. "xml" von Obsidian/Remotely Save) sonst mit 415 ab.
+    const ct = req.headers['content-type'];
+    if (ct !== undefined) {
+      if (!/^[\w.+-]+\/[\w.+-]+/.test(ct)) req.log.info({ contentType: ct }, 'DAV: ungültiger Content-Type ersetzt');
+      req.headers['content-type'] = 'application/octet-stream';
+    }
+
     const origin = req.headers.origin;
     if (origin && allowedOrigins.has(origin)) {
       reply.header('Access-Control-Allow-Origin', origin);

@@ -104,6 +104,16 @@ describe('WebDAV-Protokolldetails', () => {
     expect((await env.app.inject({ method: 'GET', url: '/dav/a%2Fb', headers: h })).statusCode).toBe(400);
   });
 
+  it('ignoriert ungültige Content-Type-Header (Obsidian/Remotely Save)', async () => {
+    const h = { authorization: env.aliceAuth, depth: '1' };
+    for (const ct of ['xml', ';', 'text/xml']) {
+      const r = await env.app.inject({ method: 'PROPFIND', url: '/dav/', headers: { ...h, 'content-type': ct }, payload: '<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:allprop/></d:propfind>' });
+      expect(r.statusCode, ct).toBe(207);
+    }
+    const put = await env.app.inject({ method: 'PUT', url: '/dav/ct.md', headers: { authorization: env.aliceAuth, 'content-type': 'markdown' }, payload: '# ok' });
+    expect(put.statusCode).toBe(201);
+  });
+
   it('PROPFIND mit expliziten Properties liefert 404 für unbekannte', async () => {
     const body = '<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:getetag/><d:quota-used-bytes/></d:prop></d:propfind>';
     const r = await env.app.inject({ method: 'PROPFIND', url: '/dav/', headers: { authorization: env.aliceAuth, depth: '0' }, payload: body });
