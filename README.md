@@ -67,6 +67,21 @@ einfügen“ belegen, dann funktionieren dieselben Schnipsel auf beiden Seiten.
 
 Siehe [deploy/cloudpanel.md](deploy/cloudpanel.md).
 
+## Sicherheit
+
+- Passwörter: scrypt (Node `crypto`); App-Passwörter und Session-Tokens werden nur als SHA-256 gespeichert.
+- Sessions: `HttpOnly`/`SameSite=Lax`/`Secure`-Cookie, CSRF-Token für alle schreibenden API-Aufrufe. Ein
+  Passwortwechsel beendet alle anderen Sitzungen.
+- Brute-Force-Schutz: Login 10 Versuche/Minute pro IP, WebDAV-Sperre nach 30 Fehlversuchen/15 Minuten pro IP.
+  Die Client-IP stammt nur vom lokalen Proxy (`trustProxy` = Loopback), gefälschte `X-Forwarded-For` wirken nicht.
+- Header: CSP (`script-src 'self'`, `frame-ancestors 'none'`), HSTS, `nosniff`, `X-Frame-Options`.
+  Vault-Dateien (`/dav`, `/api/raw`) werden mit `CSP: sandbox` ausgeliefert, HTML/SVG über WebDAV als Download.
+- Pfade werden strikt normalisiert (`..`, `\`, NUL, kodierte `/` abgelehnt); jeder Nutzer ist auf seinen Vault beschränkt.
+- **Entra ID:** Microsoft-Identitäten werden beim ersten Login über die E-Mail-Adresse mit lokalen Konten
+  verknüpft. Das ist nur sicher, solange `ALLOWED_TENANTS` ausschließlich den eigenen Mandanten enthält, dessen
+  Adressen ihr selbst verwaltet. Keine fremden oder Multi-Tenant-Mandanten freischalten.
+- Nicht enthalten: Speicherkontingente pro Nutzer, Zwei-Faktor-Anmeldung für lokale Konten.
+
 ## Bekannte Einschränkungen
 
 - Beim Umbenennen in der Web-App werden Links in anderen Notizen nicht automatisch angepasst (anders als in

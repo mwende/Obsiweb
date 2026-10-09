@@ -25,3 +25,10 @@ export async function getSession(db: Db, token: string | undefined): Promise<{ u
 export async function deleteSession(db: Db, token: string | undefined): Promise<void> {
   if (token) await db('sessions').where({ id: sha256(token) }).delete();
 }
+
+/** Beendet alle Sitzungen eines Nutzers, optional außer der aktuellen (z.B. nach Passwortwechsel). */
+export async function revokeSessions(db: Db, userId: number, keepToken?: string): Promise<void> {
+  const q = db('sessions').where({ user_id: userId });
+  if (keepToken) q.whereNot({ id: sha256(keepToken) });
+  await q.delete();
+}

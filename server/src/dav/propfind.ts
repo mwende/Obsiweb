@@ -16,7 +16,8 @@ const LIVE_PROPS = [
   'lockdiscovery',
 ] as const;
 
-const parser = new XMLParser({ ignoreAttributes: true, removeNSPrefix: true });
+// Keine Entity-Auflösung: PROPFIND braucht sie nicht (Schutz vor Entity-Expansion)
+const parser = new XMLParser({ ignoreAttributes: true, removeNSPrefix: true, processEntities: false, htmlEntities: false });
 
 export function parsePropfindBody(xml: string): PropfindRequest {
   if (!xml.trim()) return { kind: 'allprop' };

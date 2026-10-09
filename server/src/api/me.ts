@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { BasicAuthVerifier } from '../auth/appPasswords.js';
 import { createAppPassword, deleteAppPassword, listAppPasswords } from '../auth/appPasswords.js';
 import { hashPassword, validateNewPassword, verifyPassword } from '../auth/passwords.js';
+import { revokeSessions, SESSION_COOKIE } from '../auth/sessions.js';
 import { findUserById } from '../auth/users.js';
 import type { Config } from '../config.js';
 import type { Db } from '../db/knex.js';
@@ -30,6 +31,7 @@ export async function meRoutes(app: FastifyInstance, opts: { db: Db; config: Con
       return reply.code(400).send({ error: (e as Error).message });
     }
     await db('users').where({ id: u.id }).update({ password_hash: await hashPassword(next) });
+    await revokeSessions(db, u.id, req.cookies[SESSION_COOKIE]); // andere Geräte abmelden
     return { ok: true };
   });
 

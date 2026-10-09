@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { BasicAuthVerifier } from '../auth/appPasswords.js';
 import { hashPassword, validateNewPassword } from '../auth/passwords.js';
 import { requireAdmin } from '../auth/plugin.js';
+import { revokeSessions, SESSION_COOKIE } from '../auth/sessions.js';
 import { createUser, findUserByEmail, findUserById, toUser } from '../auth/users.js';
 import type { Db } from '../db/knex.js';
 import type { VaultStore } from '../vault/VaultService.js';
@@ -61,6 +62,7 @@ export async function adminRoutes(app: FastifyInstance, opts: { db: Db; store: V
       }
     }
     if (Object.keys(patch).length) await db('users').where({ id }).update(patch);
+    if (patch.password_hash) await revokeSessions(db, id, id === req.user!.id ? req.cookies[SESSION_COOKIE] : undefined);
     return { user: toUser((await findUserById(db, id))!) };
   });
 

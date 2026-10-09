@@ -4,6 +4,7 @@ import type { User } from '../auth/users.js';
 import { VaultError, httpStatusFor } from '../vault/errors.js';
 import { normalizeVaultPath } from '../vault/paths.js';
 import { stripEtag, type Vault, type VaultStore } from '../vault/VaultService.js';
+import { FailureLimiter } from '../security.js';
 import { buildMultistatus, parsePropfindBody } from './propfind.js';
 
 export const DAV_PREFIX = '/dav';
@@ -36,6 +37,8 @@ export interface DavOptions {
 export async function davPlugin(app: FastifyInstance, opts: DavOptions) {
   const { store, basicAuth } = opts;
   const allowedOrigins = new Set([...OBSIDIAN_ORIGINS, new URL(opts.baseUrl).origin]);
+  // 30 Fehlversuche pro IP und 15 Minuten, danach 429 bis Fensterende
+  const failures = new FailureLimiter(30, 15 * 60_000);
 
   // Body wird pro Methode selbst als Stream gelesen
   app.removeAllContentTypeParsers();
@@ -53,17 +56,22 @@ export async function davPlugin(app: FastifyInstance, opts: DavOptions) {
     const origin = req.headers.origin;
     if (origin && allowedOrigins.has(origin)) {
       reply.header('Access-Control-Allow-Origin', origin);
-      reply.header('Access-Control-Allow-Credentials', 'true');
       reply.header('Vary', 'Origin');
       reply.headers(CORS_HEADERS);
     }
     if (req.method === 'OPTIONS') return; // ohne Authentifizierung (CORS-Preflight)
 
+    const wait = failures.blockedFor(req.ip);
+    if (wait) {
+      return reply.code(429).header('Retry-After', String(wait)).send('Zu viele fehlgeschlagene Anmeldungen');
+    }
     const user = await basicAuth.verify(req.headers.authorization);
     if (!user) {
+      if (req.headers.authorization) failures.fail(req.ip);
       reply.header('WWW-Authenticate', 'Basic realm="ObsidianWEB", charset="UTF-8"');
       return reply.code(401).send('Authentifizierung erforderlich (E-Mail + App-Passwort)');
     }
+    failures.succeed(req.ip);
     req.davUser = user;
   });
 
@@ -190,6 +198,9 @@ async function get(req: FastifyRequest, reply: FastifyReply, vault: Vault, rel: 
   const inm = req.headers['if-none-match'];
   if (inm && inm.split(',').map(stripEtag).includes(entry.etag)) return reply.code(304).send();
   reply.header('Content-Length', String(entry.size));
+  if (/^(text\/html|application\/xhtml|image\/svg|application\/xml|text\/xml)/.test(entry.mime ?? '')) {
+    reply.header('Content-Disposition', 'attachment');
+  }
   if (req.method === 'HEAD') return reply.code(200).send();
   const { stream } = await vault.readStream(rel);
   return reply.code(200).send(stream);

@@ -18,10 +18,13 @@ import type { Config } from './config.js';
 import { davPlugin, DAV_PREFIX } from './dav/server.js';
 import type { Db } from './db/knex.js';
 import { httpStatusFor, VaultError } from './vault/errors.js';
+import { securityHeaders } from './security.js';
 import { VaultStore } from './vault/VaultService.js';
 
 export async function buildApp(config: Config, db: Db, fastifyOpts: FastifyServerOptions = {}) {
-  const app = Fastify({ trustProxy: true, bodyLimit: 10 * 1024 * 1024, ...fastifyOpts });
+  // Nur dem lokalen Reverse-Proxy (Nginx) vertrauen: request.ip ist dann der von Nginx angehängte,
+  // rechte X-Forwarded-For-Eintrag. Mit `true` könnte ein Client seine IP fälschen (Rate-Limit-Umgehung).
+  const app = Fastify({ trustProxy: ['127.0.0.1', '::1'], bodyLimit: 10 * 1024 * 1024, ...fastifyOpts });
   for (const m of ['PROPFIND', 'PROPPATCH', 'MKCOL']) app.addHttpMethod(m, { hasBody: true });
   for (const m of ['MOVE', 'COPY']) app.addHttpMethod(m);
 
@@ -29,6 +32,7 @@ export async function buildApp(config: Config, db: Db, fastifyOpts: FastifyServe
   await store.init();
   const basicAuth = new BasicAuthVerifier(db);
 
+  app.addHook('onRequest', securityHeaders(config.baseUrl));
   await app.register(cookie, { secret: config.sessionSecret });
   await app.register(rateLimit, { global: false });
 
