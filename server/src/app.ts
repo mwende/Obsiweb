@@ -71,7 +71,7 @@ export async function buildApp(config: Config, db: Db, fastifyOpts: FastifyServe
     await app.register(fastifyStatic, { root: webDist, wildcard: false, index: false });
     app.setNotFoundHandler((req, reply) => {
       const url = req.url.split('?')[0];
-      if (req.method !== 'GET' || url.startsWith('/api/') || url.startsWith('/auth/') || url.startsWith(DAV_PREFIX)) {
+      if ((req.method !== 'GET' && req.method !== 'HEAD') || url.startsWith('/api/') || url.startsWith('/auth/') || url.startsWith(DAV_PREFIX)) {
         return reply.code(404).send({ error: 'Nicht gefunden' });
       }
       const file = path.join(webDist, url);
