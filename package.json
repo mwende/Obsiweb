@@ -1,0 +1,17 @@
+{
+  "name": "obsidianweb",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": ["server", "web"],
+  "scripts": {
+    "dev:server": "tsx watch --env-file-if-exists=.env server/src/index.ts",
+    "dev:web": "npm run dev -w web",
+    "build": "npm run build -w web && npm run build -w server",
+    "start": "node --env-file-if-exists=.env server/dist/index.js",
+    "migrate": "node --env-file-if-exists=.env server/dist/cli.js migrate",
+    "user:create": "node --env-file-if-exists=.env server/dist/cli.js user:create",
+    "user:reset-password": "node --env-file-if-exists=.env server/dist/cli.js user:reset-password",
+    "test": "npm test -w server"
+  },
+  "engines": { "node": ">=22" }
+}

@@ -1,0 +1,31 @@
+# Ergänzungen für den CloudPanel-Vhost (Sites → <Domain> → Vhost).
+# In den bestehenden `server { … listen 443 … }`-Block einfügen.
+# Port 3000 an die eigene App-Port-Einstellung anpassen.
+
+client_max_body_size 100m;          # = MAX_UPLOAD_MB
+
+# WebDAV + API immer an Node durchreichen. "^~" hat Vorrang vor den
+# Regex-Locations des Templates (z.B. für *.png/*.css), die sonst
+# Anhänge unter /dav/… im Dateisystem suchen würden.
+location ^~ /dav {
+  proxy_pass http://127.0.0.1:3000;
+  proxy_http_version 1.1;
+  proxy_set_header Host $host;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto $scheme;
+  proxy_set_header Destination $http_destination;
+  proxy_request_buffering off;      # große Uploads direkt streamen
+  proxy_buffering off;
+  proxy_read_timeout 300s;
+  proxy_send_timeout 300s;
+}
+
+location ^~ /api/ {
+  proxy_pass http://127.0.0.1:3000;
+  proxy_http_version 1.1;
+  proxy_set_header Host $host;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto $scheme;
+  proxy_request_buffering off;
+  proxy_read_timeout 300s;
+}

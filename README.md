@@ -1,0 +1,63 @@
+# ObsidianWEB
+
+Selbst gehostete Web-App für Markdown-Notizen, die mit **Obsidian** synchron bleibt.
+
+- **Sync:** Die App ist selbst ein WebDAV-Server. Obsidian (Desktop, iOS, Android) synchronisiert über das
+  Community-Plugin [Remotely Save](https://github.com/remotely-save/remotely-save).
+- **Speicher:** Notizen liegen als echte `.md`-Dateien im Dateisystem (ein Ordner pro Nutzer). MySQL hält
+  Nutzer, App-Passwörter und den Volltextindex.
+- **Web-Oberfläche:** Ordnerbaum, Markdown-Editor mit Live-Vorschau, `[[Wikilinks]]`, `![[Bilder]]`,
+  Volltextsuche, Upload per Drag & Drop oder Einfügen, Konflikterkennung, mobil nutzbar.
+- **Nutzer:** mehrere Konten, Admin-Verwaltung, App-Passwörter pro Gerät, optional Login über Microsoft Entra ID.
+
+```
+Obsidian ── Remotely Save (WebDAV, App-Passwort) ──┐
+                                                   ▼
+Browser ── HTTPS (Session) ──►  Fastify (Node 22)  /auth  /api  /dav
+                                     │
+                       VaultService (einzige Schreibstelle)
+                         ├─ Dateien:  $DATA_DIR/vaults/<userId>/…
+                         └─ MySQL:    users, sessions, app_passwords, files (+FULLTEXT)
+```
+
+## Lokale Entwicklung
+
+Voraussetzung: Node.js ≥ 22. Lokal kann statt MySQL **SQLite** verwendet werden.
+
+```bash
+npm install
+cp .env.example .env
+# in .env: DATABASE_URL=sqlite:./data/dev.sqlite, DATA_DIR=./data,
+#          BASE_URL=http://localhost:3000, SESSION_SECRET=<32+ Zeichen>
+npm run build
+npm run user:create -- --email ich@example.com --name "Ich" --admin
+npm run dev:server     # API + WebDAV auf :3000 (liefert auch das gebaute Frontend aus)
+npm run dev:web        # optional: Vite-Dev-Server mit Hot Reload auf :5173
+npm test               # Server-Tests (Vault, WebDAV, API)
+```
+
+## Obsidian verbinden
+
+1. In der Web-App unter **Einstellungen & Sync** ein App-Passwort erzeugen.
+2. In Obsidian **Remotely Save** installieren und *WebDAV* wählen:
+   - Adresse: `https://<deine-domain>/dav/`
+   - Benutzer: deine E-Mail
+   - Passwort: das App-Passwort
+   - Auth-Typ: `basic`
+3. *Check* → *Sync*.
+
+Remotely Save legt den Vault in einem Ordner mit dem Vault-Namen ab. Er erscheint in der Web-App als oberster
+Ordner. Mit der Web-App bearbeitete Notizen übernimmt Obsidian beim nächsten Sync. Ändert jemand eine Notiz,
+während sie im Browser offen ist, erkennt die Web-App das am ETag und fragt nach, statt zu überschreiben.
+
+## Deployment
+
+Siehe [deploy/cloudpanel.md](deploy/cloudpanel.md).
+
+## Bekannte Einschränkungen
+
+- Beim Umbenennen in der Web-App werden Links in anderen Notizen nicht automatisch angepasst (anders als in
+  Obsidian selbst).
+- WebDAV-Locks (`LOCK`/`UNLOCK`) werden nicht unterstützt. Für Remotely Save sind sie nicht nötig; macOS Finder
+  bindet den Server deshalb nur lesend ein.
+- Dead Properties (`PROPPATCH`) werden nicht gespeichert.
