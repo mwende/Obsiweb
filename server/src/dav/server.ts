@@ -201,8 +201,9 @@ async function put(req: FastifyRequest, reply: FastifyReply, vault: Vault, rel: 
 }
 
 async function mkcol(req: FastifyRequest, reply: FastifyReply, vault: Vault, rel: string) {
-  const body = await readBody(req, 64 * 1024);
-  if (body.length > 0) return reply.code(415).send('MKCOL mit Body wird nicht unterstützt');
+  // Einen evtl. mitgeschickten Body verwerfen statt mit 415 abzulehnen: Obsidian/Remotely Save
+  // sendet bei MKCOL einen Body mit (Nextcloud & Co. ignorieren ihn ebenfalls).
+  await readBody(req, 64 * 1024);
   await vault.mkdir(rel);
   return reply.code(201).send();
 }

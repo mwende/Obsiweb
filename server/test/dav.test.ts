@@ -94,6 +94,9 @@ describe('WebDAV-Protokolldetails', () => {
     expect((await env.app.inject({ method: 'MKCOL', url: '/dav/fehlt/neu', headers: h })).statusCode).toBe(409);
     expect((await env.app.inject({ method: 'MKCOL', url: '/dav/x', headers: h })).statusCode).toBe(201);
     expect((await env.app.inject({ method: 'MKCOL', url: '/dav/x', headers: h })).statusCode).toBe(405);
+    // Remotely Save schickt bei MKCOL einen Body mit → muss trotzdem funktionieren
+    const withBody = await env.app.inject({ method: 'MKCOL', url: '/dav/mit-body', headers: { ...h, 'content-type': 'text/plain' }, payload: ' ' });
+    expect(withBody.statusCode).toBe(201);
     expect([400, 404]).toContain((await env.app.inject({ method: 'GET', url: '/dav/%2e%2e/%2e%2e/etc/passwd', headers: h })).statusCode);
     expect(() => pathFromUrl('/dav/%2e%2e/etc/passwd')).toThrow();
     expect(() => pathFromUrl('/dav/a/%2E%2E/%2E%2E/b')).toThrow();
