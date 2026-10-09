@@ -75,7 +75,7 @@ build() {
 }
 
 restart_and_check() {
-  run pm2 restart "$PM2_NAME" --update-env || return 1
+  run pm2 restart "$PM2_NAME" || return 1
   for _ in $(seq 1 20); do
     sleep 1
     if curl -fsS -m 3 -o /dev/null "http://127.0.0.1:$PORT/auth/providers"; then
