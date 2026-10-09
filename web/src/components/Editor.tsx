@@ -2,7 +2,7 @@ import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { EditorView, keymap } from '@codemirror/view';
 import CodeMirror from '@uiw/react-codemirror';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
 interface Props {
   value: string;
@@ -10,15 +10,22 @@ interface Props {
   onSave: () => void;
   /** Lädt Dateien hoch und liefert den einzufügenden Markdown-Text */
   onFiles: (files: File[]) => Promise<string>;
+  /** Öffnet die Vorlagenauswahl (Cmd/Strg+Alt+T) */
+  onTemplate: () => void;
+  /** Liefert die EditorView, z.B. zum Einfügen an der Cursorposition */
+  onView: (view: EditorView | null) => void;
   dark: boolean;
 }
 
-export function Editor({ value, onChange, onSave, onFiles, dark }: Props) {
+export function Editor({ value, onChange, onSave, onFiles, onTemplate, onView, dark }: Props) {
   const extensions = useMemo(
     () => [
       markdown({ base: markdownLanguage, codeLanguages: languages }),
       EditorView.lineWrapping,
-      keymap.of([{ key: 'Mod-s', preventDefault: true, run: () => (onSave(), true) }]),
+      keymap.of([
+        { key: 'Mod-s', preventDefault: true, run: () => (onSave(), true) },
+        { key: 'Mod-Alt-t', preventDefault: true, run: () => (onTemplate(), true) },
+      ]),
       EditorView.domEventHandlers({
         paste(e, view) {
           const files = [...(e.clipboardData?.files ?? [])];
@@ -37,8 +44,10 @@ export function Editor({ value, onChange, onSave, onFiles, dark }: Props) {
         },
       }),
     ],
-    [onSave, onFiles],
+    [onSave, onFiles, onTemplate],
   );
+
+  useEffect(() => () => onView(null), [onView]);
 
   return (
     <CodeMirror
@@ -49,6 +58,7 @@ export function Editor({ value, onChange, onSave, onFiles, dark }: Props) {
       theme={dark ? 'dark' : 'light'}
       basicSetup={{ foldGutter: false, lineNumbers: false, highlightActiveLine: false, highlightActiveLineGutter: false }}
       height="100%"
+      onCreateEditor={(view) => onView(view)}
     />
   );
 }

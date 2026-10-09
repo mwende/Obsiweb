@@ -8,6 +8,8 @@ Selbst gehostete Web-App für Markdown-Notizen, die mit **Obsidian** synchron bl
   Nutzer, App-Passwörter und den Volltextindex.
 - **Web-Oberfläche:** Ordnerbaum, Markdown-Editor mit Live-Vorschau, `[[Wikilinks]]`, `![[Bilder]]`,
   Volltextsuche, Upload per Drag & Drop oder Einfügen, Konflikterkennung, mobil nutzbar.
+- **Vorlagen:** `Cmd/Strg+Alt+T` fügt eine Vorlage aus dem Vault ein (z.B. PowerShell-Schnipsel), kompatibel
+  zu Obsidians Core-Plugin *Vorlagen* inkl. `{{title}}`, `{{date}}`, `{{time}}`, `{{date:FORMAT}}`.
 - **Nutzer:** mehrere Konten, Admin-Verwaltung, App-Passwörter pro Gerät, optional Login über Microsoft Entra ID.
 
 ```
@@ -49,6 +51,17 @@ npm test               # Server-Tests (Vault, WebDAV, API)
 Remotely Save legt den Vault in einem Ordner mit dem Vault-Namen ab. Er erscheint in der Web-App als oberster
 Ordner. Mit der Web-App bearbeitete Notizen übernimmt Obsidian beim nächsten Sync. Ändert jemand eine Notiz,
 während sie im Browser offen ist, erkennt die Web-App das am ETag und fragt nach, statt zu überschreiben.
+
+## Vorlagen
+
+Vorlagen sind normale Notizen in einem Ordner des Vaults. Die Web-App sucht den Ordner in dieser Reihenfolge:
+
+1. manuell gesetzt unter *Einstellungen & Sync → Vorlagen* (pro Browser)
+2. aus Obsidians Einstellung `.obsidian/templates.json` (nur wenn Remotely Save den Konfigurationsordner mitsynchronisiert)
+3. ein Ordner namens `Vorlagen` oder `Templates` (bevorzugt im Vault der aktuellen Notiz)
+
+In Obsidian denselben Ordner unter *Einstellungen → Vorlagen* eintragen und unter *Tastenkürzel* „Vorlagen: Vorlage
+einfügen“ belegen, dann funktionieren dieselben Schnipsel auf beiden Seiten.
 
 ## Deployment
 

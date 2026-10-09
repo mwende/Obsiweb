@@ -4,9 +4,12 @@ import { useDialog } from '../components/Dialog';
 import { Editor } from '../components/Editor';
 import { FileTree, type TreeActions } from '../components/FileTree';
 import { Preview } from '../components/Preview';
+import { TemplatePicker } from '../components/TemplatePicker';
+import type { EditorView } from '@codemirror/view';
 import { TopBar } from '../components/TopBar';
 import { baseOf, dirOf, isImage, isNote, joinPath, LinkResolver, stripMd } from '../links';
 import { navigate, noteUrl, useLocation } from '../router';
+import { applyTemplate, listTemplates, resolveTemplateConfig, titleOf, type TemplateConfig } from '../templates';
 
 type Mode = 'edit' | 'split' | 'preview';
 type Status = 'saved' | 'dirty' | 'saving' | 'error' | 'conflict';
@@ -53,6 +56,8 @@ export function Workspace({ me, onLogout }: { me: Me; onLogout: () => void }) {
   const [query, setQuery] = useState('');
   const [hits, setHits] = useState<Array<{ path: string; snippet: string }> | null>(null);
   const [toast, setToast] = useState('');
+  const [picker, setPicker] = useState<TemplateConfig | null>(null);
+  const viewRef = useRef<EditorView | null>(null);
 
   // Refs für asynchrone Speicherlogik (unabhängig von Render-Zyklen)
   const pathRef = useRef<string | null>(null);
@@ -292,6 +297,42 @@ export function Workspace({ me, onLogout }: { me: Me; onLogout: () => void }) {
     [me.attachmentsDir, notify, refreshTree],
   );
 
+  const onView = useCallback((v: EditorView | null) => {
+    viewRef.current = v;
+  }, []);
+
+  const openTemplates = useCallback(async () => {
+    try {
+      setPicker(await resolveTemplateConfig(entries, pathRef.current));
+    } catch (e) {
+      notify(errorText(e));
+    }
+  }, [entries, notify]);
+
+  const onTemplate = useCallback(() => void openTemplates(), [openTemplates]);
+
+  const insertTemplate = async (templatePath: string) => {
+    const cfg = picker;
+    setPicker(null);
+    const note = pathRef.current;
+    if (!cfg || !note) return;
+    try {
+      const { content } = await api.read(templatePath);
+      const text = applyTemplate(content, { title: titleOf(note), dateFormat: cfg.dateFormat, timeFormat: cfg.timeFormat });
+      if (effectiveMode === 'preview') setModePersist('edit');
+      // Editor ist ggf. erst nach dem Moduswechsel gemountet
+      window.setTimeout(() => {
+        const view = viewRef.current;
+        if (view) {
+          view.dispatch(view.state.replaceSelection(text));
+          view.focus();
+        } else onChange(contentRef.current + (contentRef.current.endsWith('\n') || !contentRef.current ? '' : '\n') + text);
+      });
+    } catch (e) {
+      notify(errorText(e));
+    }
+  };
+
   const createNote = async (dir: string, suggested = 'Unbenannt') => {
     const name = await dialog.prompt('Neue Notiz', suggested, 'Anlegen');
     if (!name?.trim()) return;
@@ -407,6 +448,11 @@ export function Workspace({ me, onLogout }: { me: Me; onLogout: () => void }) {
           </div>
         )}
         {showEditor && (
+          <button className="ghost small" onClick={() => void openTemplates()} title="Vorlage einfügen (Cmd/Strg+Alt+T)">
+            ⎘ <span className="hide-sm">Vorlage</span>
+          </button>
+        )}
+        {showEditor && (
           <div className="segmented" role="group" aria-label="Ansicht">
             {(narrow ? (['edit', 'preview'] as Mode[]) : (['edit', 'split', 'preview'] as Mode[])).map((m) => (
               <button key={m} className={effectiveMode === m ? 'on' : ''} onClick={() => setModePersist(m)}>
@@ -488,7 +534,15 @@ export function Workspace({ me, onLogout }: { me: Me; onLogout: () => void }) {
           <div className={`panes mode-${effectiveMode}`}>
             {effectiveMode !== 'preview' && (
               <div className="pane pane-editor">
-                <Editor value={text} onChange={onChange} onSave={onSaveNow} onFiles={onFiles} dark={dark} />
+                <Editor
+                  value={text}
+                  onChange={onChange}
+                  onSave={onSaveNow}
+                  onFiles={onFiles}
+                  onTemplate={onTemplate}
+                  onView={onView}
+                  dark={dark}
+                />
               </div>
             )}
             {effectiveMode !== 'edit' && (
@@ -511,6 +565,17 @@ export function Workspace({ me, onLogout }: { me: Me; onLogout: () => void }) {
           </div>
         )}
       </main>
+      {picker && (
+        <TemplatePicker
+          folder={picker.folder}
+          templates={picker.folder ? listTemplates(entries, picker.folder) : []}
+          onPick={(p) => void insertTemplate(p)}
+          onClose={() => {
+            setPicker(null);
+            viewRef.current?.focus();
+          }}
+        />
+      )}
       {toast && <div className="toast">{toast}</div>}
       {dialog.element}
     </div>

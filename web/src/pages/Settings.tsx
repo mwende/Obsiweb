@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { api, ApiError, type Me } from '../api';
 import { useDialog } from '../components/Dialog';
 import { TopBar } from '../components/TopBar';
+import { getManualFolder, setManualFolder } from '../templates';
 
 type AppPw = { id: number; label: string; lastUsedAt: number | null; createdAt: string };
 
@@ -12,6 +13,8 @@ export function Settings({ me, onLogout }: { me: Me; onLogout: () => void }) {
   const [fresh, setFresh] = useState<{ label: string; token: string } | null>(null);
   const [pw, setPw] = useState({ current: '', next: '', repeat: '' });
   const [pwMsg, setPwMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [tplFolder, setTplFolder] = useState(getManualFolder);
+  const [tplSaved, setTplSaved] = useState(false);
 
   const reload = async () => setItems((await api.appPasswords()).items);
   useEffect(() => {
@@ -134,6 +137,31 @@ export function Settings({ me, onLogout }: { me: Me; onLogout: () => void }) {
               ))}
             </tbody>
           </table>
+        </section>
+
+        <section className="card">
+          <h2>Vorlagen</h2>
+          <p className="muted">
+            Im Editor mit <kbd>Cmd/Strg</kbd>+<kbd>Alt</kbd>+<kbd>T</kbd> oder dem Button „Vorlage“ einfügen. Platzhalter wie in Obsidian:{' '}
+            <code>{'{{title}}'}</code>, <code>{'{{date}}'}</code>, <code>{'{{time}}'}</code>, <code>{'{{date:DD.MM.YYYY}}'}</code>.
+          </p>
+          <p className="muted">
+            Ohne Angabe wird der Ordner aus Obsidians Vorlagen-Einstellung verwendet (falls Remotely Save den Konfigurationsordner
+            mitsynchronisiert), sonst ein Ordner namens „Vorlagen“ oder „Templates“.
+          </p>
+          <form
+            className="row"
+            onSubmit={(e) => {
+              e.preventDefault();
+              setManualFolder(tplFolder);
+              setTplSaved(true);
+              setTimeout(() => setTplSaved(false), 1500);
+            }}
+          >
+            <input placeholder="Vorlagenordner, z.B. Notizen/Vorlagen (leer = automatisch)" value={tplFolder} onChange={(e) => setTplFolder(e.target.value)} />
+            <button className="primary">{tplSaved ? 'Gespeichert ✓' : 'Speichern'}</button>
+          </form>
+          <p className="muted small">Wird in diesem Browser gespeichert.</p>
         </section>
 
         <section className="card">

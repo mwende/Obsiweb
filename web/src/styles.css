@@ -810,3 +810,44 @@ code {
     padding: 4px 8px;
   }
 }
+
+/* ---------- Vorlagenauswahl */
+.picker {
+  align-self: start;
+  margin-top: 12vh;
+  width: min(520px, 100%);
+  gap: 8px;
+  padding: 12px;
+}
+.picker-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 50vh;
+  overflow: auto;
+}
+.picker-list button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  justify-content: flex-start;
+  padding: 7px 10px;
+  white-space: normal;
+  text-align: left;
+}
+.picker-list button.on {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+.picker-foot {
+  padding: 4px 2px 0;
+}
+kbd {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 0.85em;
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--bg-soft);
+}
