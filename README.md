@@ -1,4 +1,4 @@
-# ObsidianWEB
+# Obsiweb
 
 Selbst gehostete Web-App für Markdown-Notizen, die mit **Obsidian** synchron bleibt.
 

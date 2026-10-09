@@ -851,3 +851,17 @@ kbd {
   border-radius: 4px;
   background: var(--bg-soft);
 }
+
+/* ---------- Firmenlogo */
+.login-company {
+  align-self: center;
+  margin: 4px 0 6px;
+}
+.login-company img {
+  max-width: 100%;
+}
+.topbar-company {
+  flex-shrink: 0;
+  opacity: 0.9;
+  margin-right: 4px;
+}

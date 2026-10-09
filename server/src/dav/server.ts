@@ -68,7 +68,7 @@ export async function davPlugin(app: FastifyInstance, opts: DavOptions) {
     const user = await basicAuth.verify(req.headers.authorization);
     if (!user) {
       if (req.headers.authorization) failures.fail(req.ip);
-      reply.header('WWW-Authenticate', 'Basic realm="ObsidianWEB", charset="UTF-8"');
+      reply.header('WWW-Authenticate', 'Basic realm="Obsiweb", charset="UTF-8"');
       return reply.code(401).send('Authentifizierung erforderlich (E-Mail + App-Passwort)');
     }
     failures.succeed(req.ip);
