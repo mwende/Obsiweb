@@ -12,6 +12,7 @@
 #   RUN_TESTS   1 = Tests vor dem Neustart      (Standard: 1, wird übersprungen, wenn SQLite fehlt)
 #   LOG_FILE    Logdatei                        (Standard: $HOME/logs/obsiweb-deploy.log)
 #   FORCE       1 = auch ohne neue Commits bauen und neu starten
+#   VERBOSE     1 = Gründe für "nichts zu tun" auf stdout ausgeben (für CI; Cron bleibt still)
 set -uo pipefail
 
 APP_DIR="${APP_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
@@ -20,6 +21,8 @@ PM2_NAME="${PM2_NAME:-obsidianweb}"
 RUN_TESTS="${RUN_TESTS:-1}"
 LOG_FILE="${LOG_FILE:-$HOME/logs/obsiweb-deploy.log}"
 FORCE="${FORCE:-0}"
+VERBOSE="${VERBOSE:-0}"
+say() { [ "$VERBOSE" = "1" ] && echo "$*"; return 0; }
 
 mkdir -p "$(dirname "$LOG_FILE")"
 log() { printf '%s  %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >>"$LOG_FILE"; }
@@ -35,7 +38,7 @@ done
 
 # Nur ein Lauf gleichzeitig
 exec 9>"/tmp/obsiweb-deploy-$(id -u).lock"
-flock -n 9 || exit 0
+flock -n 9 || { say "Ein anderes Deployment läuft gerade – übersprungen."; exit 0; }
 
 cd "$APP_DIR" || { log "FEHLER: $APP_DIR nicht gefunden"; exit 1; }
 
@@ -47,10 +50,12 @@ fi
 OLD="$(git rev-parse HEAD)"
 NEW="$(git rev-parse "origin/$BRANCH")"
 if [ "$OLD" = "$NEW" ] && [ "$FORCE" != "1" ]; then
-  exit 0 # nichts zu tun
+  say "Keine neuen Commits (${OLD:0:7}) – nichts zu tun."
+  exit 0
 fi
 if [ "$FORCE" != "1" ] && [ -f .deploy-failed ] && [ "$(cat .deploy-failed)" = "$NEW" ]; then
-  exit 0 # dieser Commit ist bereits fehlgeschlagen → auf neuen Push warten
+  say "Commit ${NEW:0:7} ist bereits fehlgeschlagen – erst ein neuer Push oder FORCE=1 deployt erneut."
+  exit 0
 fi
 
 PORT="$(grep -E '^PORT=' .env 2>/dev/null | tail -1 | cut -d= -f2 | tr -d '[:space:]\"')"

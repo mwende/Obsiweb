@@ -1,0 +1,37 @@
+name: Deploy to Production (notes.wende.it)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # manuell auslösen = Neu-Deployment erzwingen (auch ohne neue Commits)
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          command_timeout: 15m
+          # deploy/autodeploy.sh: fetch → build → test → migrate → pm2 restart → Health-Check, bei Fehler Rollback.
+          # Das Deploy-Log dieses Laufs wird hier ausgegeben; der Exit-Code entscheidet über Erfolg/Fehlschlag.
+          script: |
+            APP_DIR=/home/wende-notes/htdocs/notes.wende.it/ObsidianWEB
+            LOG=$HOME/logs/obsiweb-deploy.log
+            mkdir -p "$(dirname "$LOG")"; touch "$LOG"
+            START=$(($(wc -l < "$LOG") + 1))
+            VERBOSE=1 FORCE=${{ github.event_name == 'workflow_dispatch' && '1' || '0' }} bash "$APP_DIR/deploy/autodeploy.sh"
+            RC=$?
+            tail -n +"$START" "$LOG"
+            if [ "$RC" -eq 0 ]; then echo "✓ Stand: $(git -C "$APP_DIR" log --oneline -1)"; else echo "✗ Deployment fehlgeschlagen (Exit $RC)"; fi
+            exit $RC

@@ -72,34 +72,42 @@ Prüfen:
 curl -i -X OPTIONS https://notes.example.com/dav/      # → 200, Header "DAV: 1"
 ```
 
-## 5. Updates – automatisch per Cron
+## 5. Updates – automatisch per Gitea Action
 
-`deploy/autodeploy.sh` prüft jede Minute, ob es neue Commits auf `main` gibt. Falls ja:
+Bei jedem Push auf `main` startet `.gitea/workflows/deploy.yml` (wie bei dms.wende.it). Der Runner verbindet
+sich per SSH mit dem Server und ruft `deploy/autodeploy.sh` auf:
 
 1. `git merge --ff-only` auf den neuen Stand
 2. `npm ci` → `npm run build` → `npm test` → `npm run migrate`
 3. `pm2 restart` und Health-Check auf `http://127.0.0.1:$PORT/auth/providers`
-4. **Schlägt ein Schritt fehl**, wird automatisch auf den vorherigen Commit zurückgerollt und dieser
-   wieder gestartet. Der fehlerhafte Commit wird nicht erneut versucht, bis ein neuer Push kommt.
+4. **Schlägt ein Schritt fehl**, wird automatisch auf den vorherigen Commit zurückgerollt und dieser wieder
+   gestartet. Der Action-Lauf wird dann rot; der fehlerhafte Commit wird erst nach einem neuen Push
+   (oder manuellem Start) erneut versucht.
 
-Einrichten (einmalig, als Site-User):
+Das Deploy-Log erscheint im Gitea-Tab **Actions** und zusätzlich in `~/logs/obsiweb-deploy.log` auf dem Server.
+*Actions → Deploy to Production → Run workflow* erzwingt ein Neu-Deployment, auch ohne neue Commits.
 
-```bash
-crontab -e
-```
+### Einrichtung
+
+1. **SSH-Schlüssel für den Runner** (auf dem Server als Site-User):
+   ```bash
+   ssh-keygen -t ed25519 -f ~/.ssh/gitea_deploy -N "" -C "gitea-actions-obsiweb"
+   cat ~/.ssh/gitea_deploy.pub >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys
+   cat ~/.ssh/gitea_deploy        # privaten Schlüssel für SSH_KEY kopieren
+   ```
+2. **Secrets im Gitea-Repo** (*Einstellungen → Actions → Secrets*):
+   `SSH_HOST` (Server), `SSH_PORT` (meist `22`), `SSH_USER` (Site-User), `SSH_KEY` (privater Schlüssel komplett,
+   inkl. `-----BEGIN …-----`/`-----END …-----`).
+3. Der Pfad zum Projekt steht in `.gitea/workflows/deploy.yml` (`APP_DIR`).
+4. Git auf dem Server muss ohne Rückfrage von Gitea holen können (Token per `credential.helper store`, Schritt 2).
+
+### Alternative ohne Runner: Cron
 
 ```cron
 * * * * * /home/obsidianweb/htdocs/notes.example.com/deploy/autodeploy.sh
-@reboot cd /home/obsidianweb/htdocs/notes.example.com && /usr/bin/env bash -lc "pm2 resurrect"
 ```
 
-Protokoll: `~/logs/obsiweb-deploy.log` (`tail -f ~/logs/obsiweb-deploy.log`).
-Ein Deployment manuell erzwingen: `FORCE=1 deploy/autodeploy.sh`.
-
-Optionen per Umgebungsvariable vor dem Skriptaufruf in der Crontab: `BRANCH`, `PM2_NAME`, `RUN_TESTS=0`, `LOG_FILE`.
-
-Voraussetzung: Git kann ohne Rückfrage von Gitea holen (Token per `credential.helper store`, siehe Schritt 2),
-und auf dem Server gibt es keine lokalen Änderungen an versionierten Dateien.
+Nicht beides gleichzeitig verwenden (ein Lock verhindert Doppelläufe, die Action meldet dann aber „übersprungen“).
 
 Manuell geht es weiterhin so:
 
