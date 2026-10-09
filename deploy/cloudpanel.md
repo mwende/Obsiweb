@@ -1,6 +1,6 @@
 # Deployment auf CloudPanel
 
-Geschrieben für CloudPanel v2 mit Node.js 22 und MySQL 8 (auf CloudPanel selbst noch nicht erprobt). Platzhalter: `notes.example.com` (Domain),
+Erprobt auf CloudPanel v2 mit Node.js 22 und MySQL 8. Platzhalter: `notes.example.com` (Domain),
 `obsidianweb` (Site-User).
 
 ## 1. Site und Datenbank anlegen
@@ -15,11 +15,13 @@ Geschrieben für CloudPanel v2 mit Node.js 22 und MySQL 8 (auf CloudPanel selbst
 
 ## 2. Code installieren
 
-Per SSH als Site-User anmelden (`ssh obsidianweb@server`):
+Das Repo ist privat. Zum Klonen in Gitea unter **Einstellungen → Anwendungen** einen Token mit
+Berechtigung *repository: Read* erzeugen. Dann per SSH als Site-User anmelden (`ssh obsidianweb@server`):
 
 ```bash
+git config --global credential.helper store   # Token für spätere `git pull` merken (~/.git-credentials)
 cd ~/htdocs/notes.example.com
-git clone <REPO-URL> .
+git clone https://git.wende.it/marco/ObsidianWEB.git .   # Benutzer: Gitea-Login, Passwort: der Token
 cp .env.example .env
 nano .env        # siehe unten
 npm ci
@@ -59,10 +61,10 @@ Logs: `pm2 logs obsidianweb`.
 
 ## 4. Nginx-Vhost anpassen
 
-In CloudPanel unter **Sites → notes.example.com → Vhost** den Inhalt von
-[`nginx-vhost.snippet`](nginx-vhost.snippet) in den `server`-Block für Port 443 einfügen und speichern.
-Wichtig ist vor allem `location ^~ /dav`. Sonst liefert das Template Dateien wie `bild.png` aus dem Dateisystem
-statt über die App aus, und der Sync von Anhängen schlägt fehl.
+In CloudPanel unter **Sites → notes.example.com → Vhost** den Inhalt durch
+[`nginx-vhost.snippet`](nginx-vhost.snippet) ersetzen (`server_name` anpassen) und speichern.
+Entscheidend ist der zusätzliche Block `location ^~ /dav`: Er reicht WebDAV-URLs unverändert an die App
+durch (`proxy_pass` ohne abschließenden `/`) und streamt Uploads.
 
 Prüfen:
 

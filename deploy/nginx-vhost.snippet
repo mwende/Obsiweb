@@ -1,31 +1,81 @@
-# Ergänzungen für den CloudPanel-Vhost (Sites → <Domain> → Vhost).
-# In den bestehenden `server { … listen 443 … }`-Block einfügen.
-# Port 3000 an die eigene App-Port-Einstellung anpassen.
+# Vollständiger CloudPanel-Vhost (Sites → <Domain> → Vhost) für ObsidianWEB.
+# Auf notes.wende.it so im Einsatz. server_name anpassen; {{…}} füllt CloudPanel aus.
+#
+# Wichtig ist der zusätzliche Block `location ^~ /dav`:
+#  - proxy_pass OHNE abschließenden "/", damit Nginx die URL nicht normalisiert
+#    (kodierte Dateinamen mit Umlauten/Leerzeichen bleiben unverändert)
+#  - Uploads werden gestreamt statt zwischengepuffert
+# client_max_body_size steht in den Locations, um Konflikte mit global_settings zu vermeiden.
 
-client_max_body_size 100m;          # = MAX_UPLOAD_MB
+server {
+  listen 80;
+  listen [::]:80;
+  listen 443 quic;
+  listen 443 ssl;
+  listen [::]:443 quic;
+  listen [::]:443 ssl;
+  http2 on;
+  http3 off;
+  {{ssl_certificate_key}}
+  {{ssl_certificate}}
+  server_name notes.example.com;
+  {{root}}
 
-# WebDAV + API immer an Node durchreichen. "^~" hat Vorrang vor den
-# Regex-Locations des Templates (z.B. für *.png/*.css), die sonst
-# Anhänge unter /dav/… im Dateisystem suchen würden.
-location ^~ /dav {
-  proxy_pass http://127.0.0.1:3000;
-  proxy_http_version 1.1;
-  proxy_set_header Host $host;
-  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-  proxy_set_header X-Forwarded-Proto $scheme;
-  proxy_set_header Destination $http_destination;
-  proxy_request_buffering off;      # große Uploads direkt streamen
-  proxy_buffering off;
-  proxy_read_timeout 300s;
-  proxy_send_timeout 300s;
-}
+  {{nginx_access_log}}
+  {{nginx_error_log}}
 
-location ^~ /api/ {
-  proxy_pass http://127.0.0.1:3000;
-  proxy_http_version 1.1;
-  proxy_set_header Host $host;
-  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-  proxy_set_header X-Forwarded-Proto $scheme;
-  proxy_request_buffering off;
-  proxy_read_timeout 300s;
+  if ($scheme != "https") {
+    rewrite ^ https://$host$request_uri permanent;
+  }
+
+  location ~ /.well-known {
+    auth_basic off;
+    allow all;
+  }
+
+  {{settings}}
+
+  include /etc/nginx/global_settings;
+
+  index index.html;
+
+  # WebDAV für Obsidian (Remotely Save): URL unverändert durchreichen, Uploads streamen
+  location ^~ /dav {
+    client_max_body_size 100m;          # = MAX_UPLOAD_MB
+    proxy_pass http://127.0.0.1:{{app_port}};
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_request_buffering off;
+    proxy_buffering off;
+    proxy_max_temp_file_size 0;
+    proxy_connect_timeout 900;
+    proxy_send_timeout 900;
+    proxy_read_timeout 900;
+  }
+
+  location / {
+    client_max_body_size 100m;
+    proxy_pass http://127.0.0.1:{{app_port}}/;
+    proxy_http_version 1.1;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Server $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Host $host;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "Upgrade";
+    proxy_pass_request_headers on;
+    proxy_max_temp_file_size 0;
+    proxy_connect_timeout 900;
+    proxy_send_timeout 900;
+    proxy_read_timeout 900;
+    proxy_buffer_size 128k;
+    proxy_buffers 4 256k;
+    proxy_busy_buffers_size 256k;
+    proxy_temp_file_write_size 256k;
+  }
 }
