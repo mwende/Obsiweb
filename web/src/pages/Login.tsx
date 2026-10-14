@@ -19,7 +19,8 @@ export function Login({ onLoggedIn }: { onLoggedIn: () => Promise<void> }) {
     setError('');
     try {
       await api.login(email, password);
-      history.replaceState(null, '', '/');
+      // Nach dem Login auf der ursprünglich aufgerufenen Seite bleiben (z.B. ?note=…)
+      if (location.pathname === '/login' || location.search.includes('error=')) history.replaceState(null, '', '/');
       await onLoggedIn();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Anmeldung fehlgeschlagen');

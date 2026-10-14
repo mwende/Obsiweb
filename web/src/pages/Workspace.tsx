@@ -410,6 +410,12 @@ export function Workspace({ me, onLogout }: { me: Me; onLogout: () => void }) {
     void createNote(dirOf(pathRef.current ?? ''), stripMd(target));
   };
 
+  /** Cmd/Strg+Klick auf [[Wikilink]] im Editor */
+  const onWikilink = (target: string) => {
+    const resolved = resolver.resolve(target, pathRef.current ?? '');
+    void openLink(resolved ?? target.split('#')[0], Boolean(resolved));
+  };
+
   const uploadInput = useRef<HTMLInputElement>(null);
   const setModePersist = (m: Mode) => {
     setMode(m);
@@ -540,6 +546,7 @@ export function Workspace({ me, onLogout }: { me: Me; onLogout: () => void }) {
                   onSave={onSaveNow}
                   onFiles={onFiles}
                   onTemplate={onTemplate}
+                  onWikilink={onWikilink}
                   onView={onView}
                   dark={dark}
                 />

@@ -865,3 +865,15 @@ kbd {
   opacity: 0.9;
   margin-right: 4px;
 }
+
+/* ---------- Links im Editor */
+.editor .cm-url {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  text-underline-offset: 2px;
+}
+.editor .cm-mod-held .cm-url {
+  cursor: pointer;
+  text-decoration-color: var(--accent);
+}

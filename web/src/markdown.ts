@@ -10,6 +10,8 @@ export interface RenderEnv {
 type WikiMeta = { target: string; alias?: string };
 
 const md = new MarkdownIt({ html: false, linkify: true, breaks: true });
+// Auch Links ohne Schema erkennen (www.…, E-Mail) – bloße Namen werden unten wieder aussortiert
+md.linkify.set({ fuzzyLink: true, fuzzyEmail: true });
 type InlineRule = Parameters<typeof md.inline.ruler.before>[2];
 type StateInline = Parameters<InlineRule>[0];
 
@@ -72,6 +74,37 @@ md.core.ruler.after('inline', 'tasklist', (state) => {
     box.content = `<input type="checkbox" class="task" disabled${m[1] === ' ' ? '' : ' checked'}> `;
     t.children!.unshift(box);
     tokens[i - 2].attrJoin('class', 'task-item');
+  }
+});
+
+// Automatisch erkannte Links ohne Schema nur behalten, wenn eindeutig: "www.…" (→ https) oder E-Mail.
+// "Notiz.md" oder "notes.wende.it" bleiben Text (sonst würde z.B. jede .md-Datei zu http://Notiz.md).
+md.core.ruler.after('linkify', 'linkify_filter', (state) => {
+  for (const block of state.tokens) {
+    if (block.type !== 'inline' || !block.children) continue;
+    const out: typeof block.children = [];
+    const ch = block.children;
+    for (let i = 0; i < ch.length; i++) {
+      const t = ch[i];
+      if (t.type === 'link_open' && t.markup === 'linkify' && ch[i + 1]?.type === 'text' && ch[i + 2]?.type === 'link_close') {
+        const text = ch[i + 1].content;
+        const href = String(t.attrGet('href') ?? '');
+        if (/^[a-z][a-z0-9+.-]*:\/\//i.test(text) || href.startsWith('mailto:')) {
+          out.push(t);
+          continue;
+        }
+        if (/^www\./i.test(text)) {
+          t.attrSet('href', `https://${text}`);
+          out.push(t);
+          continue;
+        }
+        out.push(ch[i + 1]); // kein Link → nur der Text
+        i += 2;
+        continue;
+      }
+      out.push(t);
+    }
+    block.children = out;
   }
 });
 
