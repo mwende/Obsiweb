@@ -77,8 +77,11 @@ export class VaultStore {
   }
 
   async init(): Promise<void> {
-    await fsp.mkdir(path.join(this.dataDir, 'vaults'), { recursive: true });
-    await fsp.mkdir(this.tmpDir, { recursive: true });
+    // Notizen nur für den App-Benutzer: chmod auch für bereits vorhandene Verzeichnisse
+    for (const dir of [path.join(this.dataDir, 'vaults'), this.tmpDir]) {
+      await fsp.mkdir(dir, { recursive: true });
+      await fsp.chmod(dir, 0o700);
+    }
   }
 
   forUser(userId: number): Vault {
@@ -265,6 +268,8 @@ export class Vault {
     if (from === '' || to === '') throw new VaultError('FORBIDDEN', 'Die Vault-Wurzel kann nicht verschoben werden');
     if (from === to) throw new VaultError('FORBIDDEN', 'Quelle und Ziel sind identisch');
     if (isWithin(to, from)) throw new VaultError('FORBIDDEN', 'Ein Ordner kann nicht in sich selbst verschoben werden');
+    // Ziel = Elternordner der Quelle: Beim Überschreiben würde das Ziel samt Quelle gelöscht
+    if (isWithin(from, to)) throw new VaultError('FORBIDDEN', 'Ein Eintrag kann nicht auf seinen Elternordner verschoben werden');
     return this.store.lock(this.userId, async () => {
       const src = await statOrNull(this.abs(from));
       if (!src) throw new VaultError('NOT_FOUND', `Nicht gefunden: ${from}`);
@@ -282,6 +287,7 @@ export class Vault {
     to = normalizeVaultPath(to);
     if (to === '') throw new VaultError('FORBIDDEN', 'Ziel ungültig');
     if (isWithin(to, from)) throw new VaultError('FORBIDDEN', 'Ein Ordner kann nicht in sich selbst kopiert werden');
+    if (isWithin(from, to)) throw new VaultError('FORBIDDEN', 'Ein Eintrag kann nicht auf seinen Elternordner kopiert werden');
     return this.store.lock(this.userId, async () => {
       const src = await statOrNull(this.abs(from));
       if (!src) throw new VaultError('NOT_FOUND', `Nicht gefunden: ${from}`);

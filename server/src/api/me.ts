@@ -18,7 +18,7 @@ export async function meRoutes(app: FastifyInstance, opts: { db: Db; config: Con
     attachmentsDir: config.attachmentsDir,
   }));
 
-  app.post('/api/me/password', async (req, reply) => {
+  app.post('/api/me/password', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (req, reply) => {
     const body = z.object({ current: z.string().optional(), next: z.string() }).parse(req.body);
     const u = (await findUserById(db, req.user!.id))!;
     if (u.password_hash && !(await verifyPassword(body.current ?? '', u.password_hash))) {

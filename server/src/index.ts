@@ -2,6 +2,8 @@ import { buildApp } from './app.js';
 import { loadConfig } from './config.js';
 import { createDb, migrate } from './db/knex.js';
 
+process.umask(0o077); // neue Dateien nur für den App-Benutzer lesbar
+
 const config = loadConfig();
 const db = createDb(config.databaseUrl);
 await migrate(db);

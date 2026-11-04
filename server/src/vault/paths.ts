@@ -1,6 +1,9 @@
 import path from 'node:path';
 import { VaultError } from './errors.js';
 
+/** Entspricht der Spaltenbreite von files.path */
+const MAX_PATH_LENGTH = 1024;
+
 /**
  * Normalisiert einen vault-relativen Pfad ("Ordner/Notiz.md").
  * Leerer String = Vault-Wurzel. Die Unicode-Form wird bewusst NICHT verändert,
@@ -15,7 +18,9 @@ export function normalizeVaultPath(input: string): string {
     if (Buffer.byteLength(seg) > 255) throw new VaultError('BAD_PATH', 'Dateiname zu lang');
     parts.push(seg);
   }
-  return parts.join('/');
+  const normalized = parts.join('/');
+  if (normalized.length > MAX_PATH_LENGTH) throw new VaultError('BAD_PATH', 'Pfad zu lang');
+  return normalized;
 }
 
 export function toAbsolute(root: string, rel: string): string {

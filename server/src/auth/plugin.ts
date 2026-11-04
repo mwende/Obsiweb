@@ -15,6 +15,7 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 /** Lädt die Session aus dem Cookie und prüft CSRF bei schreibenden Requests. */
 export function sessionHook(db: Db) {
   return async (req: FastifyRequest, reply: FastifyReply) => {
+    reply.header('Cache-Control', 'no-store');
     const s = await getSession(db, req.cookies[SESSION_COOKIE]);
     if (!s) return reply.code(401).send({ error: 'Nicht angemeldet' });
     if (!SAFE_METHODS.has(req.method) && req.headers['x-csrf-token'] !== s.csrf) {

@@ -7,14 +7,14 @@
 /** http(s)://… oder www.…; Satzzeichen am Ende ("…, siehe https://x.de.") gehören nicht zur URL */
 export const URL_RE = /(?:\bhttps?:\/\/|\bwww\.)[^\s<>()[\]{}"'`]*[^\s<>()[\]{}"'`.,;:!?*_~]/gi;
 
-/** E-Mail-Adressen (→ mailto:) */
-export const EMAIL_RE = /\b[\w.+-]+@[\w-]+(?:\.[\w-]+)*\.[a-z]{2,}\b/gi;
+/** E-Mail-Adressen (→ mailto:). Die Längengrenzen halten die Laufzeit bei sehr langen Zeilen linear. */
+export const EMAIL_RE = /\b[\w.+-]{1,64}@[\w-]{1,63}(?:\.[\w-]{1,63}){0,8}\.[a-z]{2,}\b/gi;
 
 /** Alles, was im Editor als Link hervorgehoben wird */
 export const LINK_HIGHLIGHT_RE = new RegExp(`${URL_RE.source}|${EMAIL_RE.source}`, 'gi');
 
 /** [[Ziel]], [[Ziel|Alias]], [[Ziel#Abschnitt]], auch als Einbettung ![[…]] */
-export const WIKILINK_RE = /!?\[\[([^\]\n]+?)\]\]/g;
+export const WIKILINK_RE = /!?\[\[([^\]\n]{1,500}?)\]\]/g;
 
 export type TextLink = { kind: 'url'; href: string; from: number; to: number } | { kind: 'wiki'; target: string; from: number; to: number };
 

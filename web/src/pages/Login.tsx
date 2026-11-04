@@ -2,10 +2,21 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { api, ApiError } from '../api';
 import { BrandLogo } from '../components/BrandLogo';
 
+/** Nur feste Texte anzeigen, damit ein präparierter Link keine eigene Meldung einschleusen kann */
+const LOGIN_ERRORS: Record<string, string> = {
+  expired: 'Anmeldevorgang abgelaufen, bitte erneut versuchen.',
+  failed: 'Anmeldung bei Microsoft fehlgeschlagen.',
+  'no-identity': 'Microsoft hat keine gültigen Identitätsdaten geliefert.',
+  tenant: 'Dieser Mandant ist nicht zugelassen.',
+  linked: 'Das Konto ist bereits mit einer anderen Microsoft-Identität verknüpft.',
+  'no-account': 'Für diese Microsoft-Identität gibt es kein Konto.',
+};
+const loginError = (code: string | null) => (code ? (LOGIN_ERRORS[code] ?? 'Anmeldung fehlgeschlagen.') : '');
+
 export function Login({ onLoggedIn }: { onLoggedIn: () => Promise<void> }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(() => new URLSearchParams(location.search).get('error') ?? '');
+  const [error, setError] = useState(() => loginError(new URLSearchParams(location.search).get('error')));
   const [busy, setBusy] = useState(false);
   const [entra, setEntra] = useState(false);
 

@@ -43,11 +43,11 @@ export async function entraRoutes(app: FastifyInstance, opts: { db: Db; config: 
   });
 
   app.get('/auth/callback', async (req, reply) => {
-    const fail = (msg: string) => reply.redirect(`/login?error=${encodeURIComponent(msg)}`);
+    const fail = (code: string) => reply.redirect(`/login?error=${code}`);
     const raw = req.cookies[FLOW_COOKIE];
     const unsigned = raw ? req.unsignCookie(raw) : undefined;
     reply.clearCookie(FLOW_COOKIE, { path: '/auth' });
-    if (!unsigned?.valid || !unsigned.value) return fail('Anmeldevorgang abgelaufen, bitte erneut versuchen');
+    if (!unsigned?.valid || !unsigned.value) return fail('expired');
     const flow = JSON.parse(unsigned.value) as { verifier: string; state: string; nonce: string };
 
     let claims: oidc.IDToken | undefined;
@@ -60,25 +60,25 @@ export async function entraRoutes(app: FastifyInstance, opts: { db: Db; config: 
       claims = tokens.claims();
     } catch (err) {
       req.log.warn({ err }, 'Entra-Login fehlgeschlagen');
-      return fail('Anmeldung bei Microsoft fehlgeschlagen');
+      return fail('failed');
     }
-    if (!claims) return fail('Keine Identitätsdaten erhalten');
+    if (!claims) return fail('no-identity');
     const oid = String(claims.oid ?? '');
     const tid = String(claims.tid ?? '');
     const email = normalizeEmail(String(claims.email ?? claims.preferred_username ?? ''));
-    if (!oid) return fail('Kein Benutzer-Identifier (oid) im Token');
-    if (!entra.allowedTenants.includes(tid)) return fail('Dieser Mandant ist nicht zugelassen');
+    if (!oid) return fail('no-identity');
+    if (!entra.allowedTenants.includes(tid)) return fail('tenant');
 
     let user = await db('users').where({ entra_oid: oid }).first();
     if (!user && email) {
       user = await findUserByEmail(db, email);
       if (user) {
-        if (user.entra_oid && user.entra_oid !== oid) return fail('Konto ist bereits mit einer anderen Microsoft-Identität verknüpft');
+        if (user.entra_oid && user.entra_oid !== oid) return fail('linked');
         await db('users').where({ id: user.id }).update({ entra_oid: oid, tenant_id: tid });
       }
     }
     if (!user) {
-      if (!entra.autoCreate || !email) return fail('Kein Konto für diese Microsoft-Identität vorhanden');
+      if (!entra.autoCreate || !email) return fail('no-account');
       user = await createUser(db, { email, displayName: String(claims.name ?? email), entraOid: oid, tenantId: tid });
     }
     const { token } = await createSession(db, user.id);

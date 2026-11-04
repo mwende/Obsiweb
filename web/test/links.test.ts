@@ -51,3 +51,12 @@ describe('Vorschau', () => {
     expect(render('`https://x.de`')).not.toContain('<a ');
   });
 });
+
+describe('Laufzeit bei sehr langen Zeilen', () => {
+  it('bleibt linear', () => {
+    const t0 = performance.now();
+    findLinkAt('a.'.repeat(200_000), 5);
+    findLinkAt('[['.repeat(200_000), 5);
+    expect(performance.now() - t0).toBeLessThan(2000);
+  });
+});

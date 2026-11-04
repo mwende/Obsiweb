@@ -83,6 +83,7 @@ Updates erhalten. Ohne Logo zeigt die App nur ihren Namen.
 - Header: CSP (`script-src 'self'`, `frame-ancestors 'none'`), HSTS, `nosniff`, `X-Frame-Options`.
   Vault-Dateien (`/dav`, `/api/raw`) werden mit `CSP: sandbox` ausgeliefert, HTML/SVG über WebDAV als Download.
 - Pfade werden strikt normalisiert (`..`, `\`, NUL, kodierte `/` abgelehnt); jeder Nutzer ist auf seinen Vault beschränkt.
+- Vault-Verzeichnisse sind nur für den App-Benutzer lesbar (`700`, `umask 077`).
 - **Entra ID:** Microsoft-Identitäten werden beim ersten Login über die E-Mail-Adresse mit lokalen Konten
   verknüpft. Das ist nur sicher, solange `ALLOWED_TENANTS` ausschließlich den eigenen Mandanten enthält, dessen
   Adressen ihr selbst verwaltet. Keine fremden oder Multi-Tenant-Mandanten freischalten.

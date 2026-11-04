@@ -62,7 +62,7 @@ export async function buildApp(config: Config, db: Db, fastifyOpts: FastifyServe
   // ---- Geschützte REST-API
   await app.register(async (api) => {
     await api.register(multipart);
-    api.addHook('preHandler', sessionHook(db));
+    api.addHook('onRequest', sessionHook(db)); // vor dem Lesen des Anfrageinhalts
     await api.register(fileRoutes, { db, store, config });
     await api.register(meRoutes, { db, config, basicAuth });
     await api.register(adminRoutes, { db, store, basicAuth, branding });
