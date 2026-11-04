@@ -28,6 +28,9 @@ export interface NoteFile {
   mtimeMs: number;
 }
 
+export type LogoVariant = 'light' | 'dark';
+export type Branding = Record<LogoVariant, string | null>;
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -89,4 +92,11 @@ export const api = {
     request<{ user: User }>('PATCH', `/api/admin/users/${id}`, u),
   deleteUser: (id: number, deleteVault: boolean) => request('DELETE', `/api/admin/users/${id}?deleteVault=${deleteVault}`),
   reindex: () => request('POST', '/api/admin/reindex'),
+  branding: () => request<Branding>('GET', '/branding'),
+  uploadLogo: (variant: LogoVariant, file: File) => {
+    const fd = new FormData();
+    fd.append('file', file, file.name);
+    return request<Branding>('POST', `/api/admin/branding/${variant}`, fd);
+  },
+  removeLogo: (variant: LogoVariant) => request<Branding>('DELETE', `/api/admin/branding/${variant}`),
 };

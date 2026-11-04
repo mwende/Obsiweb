@@ -1,0 +1,31 @@
+# Nginx-Konfiguration für Obsiweb. Siehe INSTALL.md.
+# server_name anpassen; die HTTPS-Einträge ergänzt certbot.
+server {
+  listen 80;
+  listen [::]:80;
+  server_name notes.example.com;
+
+  client_max_body_size 100m;            # = MAX_UPLOAD_MB
+
+  # WebDAV für Obsidian: URL unverändert durchreichen (proxy_pass ohne "/" am Ende), Uploads streamen
+  location ^~ /dav {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_request_buffering off;
+    proxy_buffering off;
+    proxy_read_timeout 900;
+    proxy_send_timeout 900;
+  }
+
+  location / {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 900;
+  }
+}

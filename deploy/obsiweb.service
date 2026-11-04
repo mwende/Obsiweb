@@ -1,0 +1,23 @@
+# systemd-Dienst für Obsiweb. Siehe INSTALL.md.
+# Pfade anpassen, falls nicht /opt/obsiweb und /var/lib/obsiweb verwendet werden.
+[Unit]
+Description=Obsiweb
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=obsiweb
+Group=obsiweb
+WorkingDirectory=/opt/obsiweb
+ExecStart=/usr/bin/env node --env-file=.env server/dist/index.js
+Restart=on-failure
+RestartSec=5
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/obsiweb
+
+[Install]
+WantedBy=multi-user.target

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Me } from '../api';
 import { Logo } from '../pages/Login';
-import { CompanyLogo } from './CompanyLogo';
+import { BrandLogo } from './BrandLogo';
 import { navigate } from '../router';
 
 export function TopBar({ me, onLogout, children, left }: { me: Me; onLogout: () => void; children?: ReactNode; left?: ReactNode }) {
@@ -20,7 +20,7 @@ export function TopBar({ me, onLogout, children, left }: { me: Me; onLogout: () 
         <Logo /> <span className="hide-sm">Obsiweb</span>
       </a>
       <div className="topbar-center">{children}</div>
-      <CompanyLogo height={22} className="topbar-company hide-sm" />
+      <BrandLogo height={22} className="topbar-company hide-sm" />
       <div className="menu" ref={ref}>
         <button className="ghost avatar" onClick={() => setOpen((o) => !o)} title={me.user.email} aria-haspopup="menu">
           {initials(me.user.displayName)}

@@ -22,6 +22,10 @@ Browser ── HTTPS (Session) ──►  Fastify (Node 22)  /auth  /api  /dav
                          └─ MySQL:    users, sessions, app_passwords, files (+FULLTEXT)
 ```
 
+## Installation
+
+Siehe [INSTALL.md](INSTALL.md) für einen eigenen Linux-Server und [deploy/cloudpanel.md](deploy/cloudpanel.md) für CloudPanel.
+
 ## Lokale Entwicklung
 
 Voraussetzung: Node.js ≥ 22. Lokal kann statt MySQL **SQLite** verwendet werden.
@@ -63,9 +67,11 @@ Vorlagen sind normale Notizen in einem Ordner des Vaults. Die Web-App sucht den 
 In Obsidian denselben Ordner unter *Einstellungen → Vorlagen* eintragen und unter *Tastenkürzel* „Vorlagen: Vorlage
 einfügen“ belegen, dann funktionieren dieselben Schnipsel auf beiden Seiten.
 
-## Deployment
+## Logo
 
-Siehe [deploy/cloudpanel.md](deploy/cloudpanel.md).
+Das Logo ist nicht Teil des Codes. Admins laden es unter **Benutzerverwaltung → Logo** hoch, je eine Variante für
+helle und dunkle Hintergründe (PNG, JPEG, WebP, SVG, bis 2 MB). Es liegt in `$DATA_DIR/branding/` und bleibt bei
+Updates erhalten. Ohne Logo zeigt die App nur ihren Namen.
 
 ## Sicherheit
 

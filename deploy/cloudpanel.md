@@ -15,13 +15,13 @@ Erprobt auf CloudPanel v2 mit Node.js 22 und MySQL 8. Platzhalter: `notes.exampl
 
 ## 2. Code installieren
 
-Das Repo ist privat. Zum Klonen in Gitea unter **Einstellungen → Anwendungen** einen Token mit
-Berechtigung *repository: Read* erzeugen. Dann per SSH als Site-User anmelden (`ssh obsidianweb@server`):
+Bei einem privaten Repo zuerst einen Lese-Token erzeugen, den Git statt eines Passworts verwendet.
+Dann per SSH als Site-User anmelden (`ssh obsidianweb@server`):
 
 ```bash
 git config --global credential.helper store   # Token für spätere `git pull` merken (~/.git-credentials)
 cd ~/htdocs/notes.example.com
-git clone https://git.wende.it/marco/ObsidianWEB.git .   # Benutzer: Gitea-Login, Passwort: der Token
+git clone <REPO-URL> .   # bei privatem Repo: Passwort = Token
 cp .env.example .env
 nano .env        # siehe unten
 npm ci
@@ -74,7 +74,7 @@ curl -i -X OPTIONS https://notes.example.com/dav/      # → 200, Header "DAV: 1
 
 ## 5. Updates – automatisch per Gitea Action
 
-Bei jedem Push auf `main` startet `.gitea/workflows/deploy.yml` (wie bei dms.wende.it). Der Runner verbindet
+Bei jedem Push auf `main` startet `.gitea/workflows/deploy.yml`. Der Runner verbindet
 sich per SSH mit dem Server und ruft `deploy/autodeploy.sh` auf:
 
 1. `git merge --ff-only` auf den neuen Stand
@@ -99,7 +99,7 @@ Das Deploy-Log erscheint im Gitea-Tab **Actions** und zusätzlich in `~/logs/obs
    `SSH_HOST` (Server), `SSH_PORT` (meist `22`), `SSH_USER` (Site-User), `SSH_KEY` (privater Schlüssel komplett,
    inkl. `-----BEGIN …-----`/`-----END …-----`).
 3. Der Pfad zum Projekt steht in `.gitea/workflows/deploy.yml` (`APP_DIR`).
-4. Git auf dem Server muss ohne Rückfrage von Gitea holen können (Token per `credential.helper store`, Schritt 2).
+4. Git auf dem Server muss ohne Rückfrage vom Repo holen können (Token per `credential.helper store`, Schritt 2).
 
 ### Alternative ohne Runner: Cron
 

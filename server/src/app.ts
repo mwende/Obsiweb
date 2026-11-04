@@ -14,6 +14,7 @@ import { BasicAuthVerifier } from './auth/appPasswords.js';
 import { localAuthRoutes } from './auth/local.js';
 import { entraRoutes } from './auth/oidc.js';
 import { sessionHook } from './auth/plugin.js';
+import { BrandingStore, brandingRoutes } from './branding.js';
 import type { Config } from './config.js';
 import { davPlugin, DAV_PREFIX } from './dav/server.js';
 import type { Db } from './db/knex.js';
@@ -31,6 +32,7 @@ export async function buildApp(config: Config, db: Db, fastifyOpts: FastifyServe
   const store = new VaultStore(db, config.dataDir, config.maxUploadBytes);
   await store.init();
   const basicAuth = new BasicAuthVerifier(db);
+  const branding = new BrandingStore(config.dataDir);
 
   app.addHook('onRequest', securityHeaders(config.baseUrl));
   await app.register(cookie, { secret: config.sessionSecret });
@@ -54,6 +56,7 @@ export async function buildApp(config: Config, db: Db, fastifyOpts: FastifyServe
   // ---- Öffentliche Auth-Routen
   await app.register(localAuthRoutes, { db, config });
   if (config.entra) await app.register(entraRoutes, { db, config });
+  await app.register(brandingRoutes, { branding });
   app.get('/auth/providers', async () => ({ local: true, entra: Boolean(config.entra) }));
 
   // ---- Geschützte REST-API
@@ -62,7 +65,7 @@ export async function buildApp(config: Config, db: Db, fastifyOpts: FastifyServe
     api.addHook('preHandler', sessionHook(db));
     await api.register(fileRoutes, { db, store, config });
     await api.register(meRoutes, { db, config, basicAuth });
-    await api.register(adminRoutes, { db, store, basicAuth });
+    await api.register(adminRoutes, { db, store, basicAuth, branding });
   });
 
   // ---- SPA

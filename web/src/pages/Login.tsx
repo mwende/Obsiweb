@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { api, ApiError } from '../api';
-import { CompanyLogo } from '../components/CompanyLogo';
+import { BrandLogo } from '../components/BrandLogo';
 
 export function Login({ onLoggedIn }: { onLoggedIn: () => Promise<void> }) {
   const [email, setEmail] = useState('');
@@ -32,7 +32,7 @@ export function Login({ onLoggedIn }: { onLoggedIn: () => Promise<void> }) {
   return (
     <div className="login-wrap">
       <form className="card login" onSubmit={submit}>
-        <CompanyLogo height={56} className="login-company" />
+        <BrandLogo height={56} className="login-company" />
         <div className="brand">
           <Logo /> Obsiweb
         </div>

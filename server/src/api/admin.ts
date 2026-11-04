@@ -6,6 +6,7 @@ import { hashPassword, validateNewPassword } from '../auth/passwords.js';
 import { requireAdmin } from '../auth/plugin.js';
 import { revokeSessions, SESSION_COOKIE } from '../auth/sessions.js';
 import { createUser, findUserByEmail, findUserById, toUser } from '../auth/users.js';
+import { detectImageType, isLogoVariant, MAX_LOGO_BYTES, type BrandingStore } from '../branding.js';
 import type { Db } from '../db/knex.js';
 import type { VaultStore } from '../vault/VaultService.js';
 
@@ -21,8 +22,8 @@ const updateBody = z.object({
   isAdmin: z.boolean().optional(),
 });
 
-export async function adminRoutes(app: FastifyInstance, opts: { db: Db; store: VaultStore; basicAuth: BasicAuthVerifier }) {
-  const { db, store, basicAuth } = opts;
+export async function adminRoutes(app: FastifyInstance, opts: { db: Db; store: VaultStore; basicAuth: BasicAuthVerifier; branding: BrandingStore }) {
+  const { db, store, basicAuth, branding } = opts;
   app.addHook('preHandler', requireAdmin);
 
   app.get('/api/admin/users', async () => {
@@ -75,6 +76,25 @@ export async function adminRoutes(app: FastifyInstance, opts: { db: Db; store: V
     basicAuth.clear();
     if (deleteVault === 'true') await fsp.rm(store.forUser(id).root, { recursive: true, force: true });
     return { ok: true };
+  });
+
+  app.post('/api/admin/branding/:variant', async (req, reply) => {
+    const { variant } = req.params as { variant: string };
+    if (!isLogoVariant(variant)) return reply.code(400).send({ error: 'Unbekannte Logo-Variante' });
+    const file = await req.file({ limits: { fileSize: MAX_LOGO_BYTES } });
+    if (!file) return reply.code(400).send({ error: 'Keine Datei übermittelt' });
+    const data = await file.toBuffer(); // wirft 413 bei Überschreitung von fileSize
+    const type = detectImageType(data);
+    if (!type) return reply.code(415).send({ error: 'Erlaubt sind PNG, JPEG, WebP und SVG' });
+    await branding.save(variant, type, data);
+    return branding.urls();
+  });
+
+  app.delete('/api/admin/branding/:variant', async (req, reply) => {
+    const { variant } = req.params as { variant: string };
+    if (!isLogoVariant(variant)) return reply.code(400).send({ error: 'Unbekannte Logo-Variante' });
+    await branding.remove(variant);
+    return branding.urls();
   });
 
   app.post('/api/admin/reindex', async () => {

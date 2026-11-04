@@ -1,10 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { api, ApiError, type Me, type User } from '../api';
+import { api, ApiError, type LogoVariant, type Me, type User } from '../api';
+import { setBranding, useBranding } from '../components/BrandLogo';
 import { useDialog } from '../components/Dialog';
 import { TopBar } from '../components/TopBar';
 
 export function Admin({ me, onLogout }: { me: Me; onLogout: () => void }) {
   const dialog = useDialog();
+  const branding = useBranding();
   const [users, setUsers] = useState<User[]>([]);
   const [form, setForm] = useState({ email: '', displayName: '', password: '', isAdmin: false });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -38,6 +40,42 @@ export function Admin({ me, onLogout }: { me: Me; onLogout: () => void }) {
       <main className="page-body">
         <h1>Benutzerverwaltung</h1>
         {msg && <div className={msg.ok ? 'success' : 'error'}>{msg.text}</div>}
+
+        <section className="card">
+          <h2>Logo</h2>
+          <p className="muted">
+            Erscheint auf der Login-Seite und in der Kopfzeile. PNG, JPEG, WebP oder SVG, höchstens 2 MB. Ist nur eine Variante
+            hinterlegt, wird sie für beide Farbschemata verwendet.
+          </p>
+          <div className="logo-grid">
+            {(['light', 'dark'] as LogoVariant[]).map((variant) => (
+              <div key={variant} className={`logo-slot logo-slot-${variant}`}>
+                <strong>{variant === 'light' ? 'Für helle Hintergründe' : 'Für dunkle Hintergründe'}</strong>
+                <div className="logo-preview">
+                  {branding?.[variant] ? <img src={branding[variant]!} alt="" /> : <span>Kein Logo</span>}
+                </div>
+                <div className="row">
+                  <label className="button">
+                    Hochladen
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                      hidden
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = '';
+                        if (file) void run(async () => setBranding(await api.uploadLogo(variant, file)), 'Logo gespeichert.');
+                      }}
+                    />
+                  </label>
+                  <button className="ghost danger-text" onClick={() => void run(async () => setBranding(await api.removeLogo(variant)), 'Logo entfernt.')}>
+                    Entfernen
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
 
         <section className="card">
           <h2>Neuer Nutzer</h2>
